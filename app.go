@@ -185,8 +185,7 @@ func login(c *fiber.Ctx) error {
 
 	var filter bson.M = bson.M{}
 
-	//TODO: slå mot databas
-	if c.Params("id") != "" {
+	if c.FormValue("user") != "" && c.FormValue("pass") != "" {
 		filter = bson.M{"user": user, "pass": pass}
 	}
 
