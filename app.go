@@ -175,7 +175,7 @@ func deleteUser(c *fiber.Ctx) error {
 }
 
 func login(c *fiber.Ctx) error {
-	user := c.FormValue("user")
+	email := c.FormValue("email")
 	pass := c.FormValue("pass")
 
 	collection, err := getMongoDbCollection(dbName, collectionName)
@@ -185,8 +185,8 @@ func login(c *fiber.Ctx) error {
 
 	var filter bson.M = bson.M{}
 
-	if user != "" && pass != "" {
-		filter = bson.M{"user": user, "pass": pass}
+	if email != "" && pass != "" {
+		filter = bson.M{"email": email, "pass": pass}
 	}
 
 	var result User
@@ -204,7 +204,7 @@ func login(c *fiber.Ctx) error {
 	claims := token.Claims.(jwt.MapClaims)
 
 	claims["name"] = result.FirstName
-	claims["admin"] = true
+	claims["admin"] = false
 	claims["exp"] = time.Now().Add(time.Hour * 1).Unix()
 
 	// Generate encoded token and send it as response.
