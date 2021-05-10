@@ -35,7 +35,6 @@ func main() {
 
 	app.Post("/login", login)
 
-	//TODO: kolla om användaren redan finns i databasen, isåfall meddela
 	app.Post("/user", postUser)
 
 	app.Use(jwtware.New(jwtware.Config{
