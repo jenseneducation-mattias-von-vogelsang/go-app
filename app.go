@@ -63,7 +63,6 @@ func getUser(c *fiber.Ctx) error {
 
 	var filter bson.M = bson.M{}
 
-	//TODO: slå mot databas
 	if c.Params("id") != "" {
 		id := c.Params("id")
 		objID, _ := primitive.ObjectIDFromHex(id)
@@ -86,7 +85,7 @@ func getUser(c *fiber.Ctx) error {
 	}
 
 	json, _ := json.Marshal(results)
-	return c.Send(json)
+	return c.Status(200).Send(json)
 }
 
 func getUsers(c *fiber.Ctx) error {
@@ -108,11 +107,11 @@ func getUsers(c *fiber.Ctx) error {
 	cur.All(context.Background(), &results)
 
 	if results == nil {
-		return c.SendStatus(404)
+		return c.Status(404).Send([]byte("Not found"))
 	}
 
 	json, _ := json.Marshal(results)
-	return c.Send(json)
+	return c.Status(200).Send(json)
 }
 
 func postUser(c *fiber.Ctx) error {
@@ -124,13 +123,27 @@ func postUser(c *fiber.Ctx) error {
 	var user User
 	json.Unmarshal([]byte(c.Body()), &user)
 
+	var filter bson.M = bson.M{}
+
+	if user.Email != "" {
+		filter = bson.M{"email": user.Email}
+	}
+
+	var result User
+
+	collection.FindOne(context.Background(), filter).Decode(&result)
+
+	if result.Email == user.Email {
+		return c.Status(409).Send([]byte("E-mail already exists"))
+	}
+
 	res, err := collection.InsertOne(context.Background(), user)
 	if err != nil {
 		return c.Status(500).Send([]byte(err.Error()))
 	}
 
 	response, _ := json.Marshal(res)
-	return c.Send(response)
+	return c.Status(201).Send(response)
 }
 
 func updateUser(c *fiber.Ctx) error {
@@ -153,7 +166,7 @@ func updateUser(c *fiber.Ctx) error {
 	}
 
 	response, _ := json.Marshal(res)
-	return c.Send(response)
+	return c.Status(201).Send(response)
 }
 
 func deleteUser(c *fiber.Ctx) error {
@@ -171,12 +184,12 @@ func deleteUser(c *fiber.Ctx) error {
 	}
 
 	jsonResponse, _ := json.Marshal(res)
-	return c.Send(jsonResponse)
+	return c.Status(200).Send(jsonResponse)
 }
 
 func login(c *fiber.Ctx) error {
 	email := c.FormValue("email")
-	pass := c.FormValue("pass")
+	password := c.FormValue("pass")
 
 	collection, err := getMongoDbCollection(dbName, collectionName)
 	if err != nil {
@@ -185,8 +198,8 @@ func login(c *fiber.Ctx) error {
 
 	var filter bson.M = bson.M{}
 
-	if email != "" && pass != "" {
-		filter = bson.M{"email": email, "pass": pass}
+	if email != "" && password != "" {
+		filter = bson.M{"email": email, "password": password}
 	}
 
 	var result User
@@ -213,7 +226,7 @@ func login(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	return c.JSON(fiber.Map{"token": t})
+	return c.Status(200).JSON(fiber.Map{"token": t})
 }
 
 func accessible(c *fiber.Ctx) error {
@@ -224,5 +237,5 @@ func restricted(c *fiber.Ctx) error {
 	user := c.Locals("user").(*jwt.Token)
 	claims := user.Claims.(jwt.MapClaims)
 	name := claims["name"].(string)
-	return c.SendString("Welcome " + name)
+	return c.Status(200).SendString("Welcome " + name)
 }
